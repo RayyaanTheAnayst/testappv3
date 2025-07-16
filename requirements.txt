@@ -1,5 +1,0 @@
-streamlit
-pandas
-snowflake-connector-python
-snowflake-snowpark-python[pandas]
-streamlit-snowflake-connection
