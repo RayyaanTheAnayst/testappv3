@@ -1,13 +1,26 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+from snowflake.snowpark import Session
 from snowflake.snowpark.functions import col
 
 # -----------------------------------------------
-# 🔗 Snowflake Connection
+# 🔗 Snowflake Session Creation
 # -----------------------------------------------
-cnx = st.connection("snowflake")
-session = cnx.session()
+@st.cache_resource
+def create_snowflake_session():
+    connection_parameters = {
+        "account": st.secrets["snowflake"]["account"],
+        "user": st.secrets["snowflake"]["user"],
+        "password": st.secrets["snowflake"]["password"],
+        "role": st.secrets["snowflake"]["role"],
+        "warehouse": st.secrets["snowflake"]["warehouse"],
+        "database": st.secrets["snowflake"]["database"],
+        "schema": st.secrets["snowflake"]["schema"],
+    }
+    return Session.builder.configs(connection_parameters).create()
+
+session = create_snowflake_session()
 
 # -----------------------------------------------
 # 📦 Data Loaders
@@ -87,7 +100,7 @@ def main():
     duration = st.slider("Duration in minutes", 1, 120, 30)
 
     if st.button("Calculate and Log"):
-        cal_per_min = df_ex[df_ex["EXERCISE_NAME"] == exercise]["CALORIES_PER_MINUTE"].values[0]
+        cal_per_min = df_ex.loc[df_ex["EXERCISE_NAME"] == exercise, "CALORIES_PER_MINUTE"].values[0]
         met = get_met_from_calories_per_min(cal_per_min)
         calories = calculate_calories(met, weight, duration)
 
@@ -103,13 +116,3 @@ def main():
 # -----------------------------------------------
 if __name__ == "__main__":
     main()
-
-# -----------------------------------------------
-# 🔒 Optional: Debug Secrets (Dev only)
-# -----------------------------------------------
-if st.sidebar.checkbox("🔍 Show Secrets (Dev Only)"):
-    try:
-        st.sidebar.json(st.secrets["snowflake"])
-    except Exception as e:
-        st.sidebar.error("❌ Could not load Snowflake secrets.")
-        st.sidebar.exception(e)
